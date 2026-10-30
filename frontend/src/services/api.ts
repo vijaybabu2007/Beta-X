@@ -83,6 +83,28 @@ export const api = {
       return `${API_BASE_URL}/documents/${documentId}/download`;
     },
   },
+  extractions: {
+    extract: async (documentId: number | string): Promise<any> => {
+      const res = await apiClient.post(`/documents/${documentId}/extract`);
+      return res.data;
+    },
+    getLatest: async (documentId: number | string): Promise<any> => {
+      const res = await apiClient.get(`/documents/${documentId}/extraction`);
+      return res.data;
+    },
+    getHistory: async (documentId: number | string): Promise<any[]> => {
+      const res = await apiClient.get(`/documents/${documentId}/extraction/history`);
+      return res.data;
+    },
+    reviewField: async (
+      extractionId: number | string,
+      fieldId: number | string,
+      data: { reviewStatus: string; updatedValue?: string; officerRemarks?: string }
+    ): Promise<any> => {
+      const res = await apiClient.patch(`/extractions/${extractionId}/fields/${fieldId}/review`, data);
+      return res.data;
+    },
+  },
   health: async () => {
     const res = await apiClient.get('/health');
     return res.data;

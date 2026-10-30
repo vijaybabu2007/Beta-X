@@ -150,6 +150,7 @@ export function App() {
               {activeTab === 'documents' && (
                 <DocumentLocker 
                   applicationId={applications.length > 0 ? applications[0].id : 1}
+                  userRole={currentRole}
                 />
               )}
               {activeTab === 'knowledge_bot' && (
@@ -173,7 +174,14 @@ export function App() {
           )}
 
           {currentRole === 'REVIEWING_OFFICER' && (
-            <OfficerDashboard />
+            activeTab === 'evidence_viewer' ? (
+              <DocumentLocker 
+                applicationId={applications.length > 0 ? applications[0].id : 1}
+                userRole={currentRole}
+              />
+            ) : (
+              <OfficerDashboard />
+            )
           )}
 
           {currentRole === 'SYSTEM_ADMIN' && (

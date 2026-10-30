@@ -80,3 +80,47 @@ export interface SystemHealth {
   governance: string;
   modules: Record<string, string>;
 }
+
+export type ExtractionStatus = 
+  | 'COMPLETED' 
+  | 'PARTIALLY_VALIDATED' 
+  | 'FAILED' 
+  | 'UNSUPPORTED_CATEGORY' 
+  | 'CONFIG_ERROR';
+
+export type FieldReviewStatus = 
+  | 'EXTRACTED' 
+  | 'NEEDS_REVIEW' 
+  | 'VERIFIED' 
+  | 'FLAGGED_INCORRECT' 
+  | 'CLARIFICATION_REQUESTED';
+
+export interface ExtractedFieldModel {
+  id: number;
+  fieldName: string;
+  fieldValue: string | null;
+  originalValue: string | null;
+  sourcePage: number | null;
+  evidenceQuotation: string | null;
+  confidenceScore: number | null;
+  reviewStatus: FieldReviewStatus;
+  reviewedByEmail: string | null;
+  reviewedAt: string | null;
+  officerRemarks: string | null;
+}
+
+export interface DocumentExtractionModel {
+  id: number;
+  documentId: number;
+  applicationId: number;
+  documentCategory: DocumentCategory;
+  extractionStatus: ExtractionStatus;
+  modelIdentifier: string;
+  version: number;
+  documentSha256: string;
+  fields: ExtractedFieldModel[];
+  warnings: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+

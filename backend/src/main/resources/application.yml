@@ -18,6 +18,6 @@ reguflow:
     expiration-ms: 86400000 # 24 hours
   gemini:
     api-key: ${GEMINI_API_KEY:}
-    model: gemini-1.5-flash
+    model: ${GEMINI_MODEL:gemini-1.5-flash}
   cors:
     allowed-origins: "http://localhost:5173,http://localhost:3000"

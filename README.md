@@ -96,8 +96,73 @@ $env:JAVA_HOME = "C:\Users\VIJAY\.p2\pool\plugins\org.eclipse.justj.openjdk.hots
 ## 6. Implementation Roadmap
 
 - [x] **Phase 1**: Architecture, folder separation, frontend enterprise UI skeleton, backend Spring Boot 3 skeleton, database configuration, health verification.
-- [ ] **Phase 2**: JPA entities, JWT authentication, user roles, application management REST APIs.
-- [ ] **Phase 3**: PDF upload pipeline, Apache PDFBox 3 extraction, page-level evidence, OCR fallback.
-- [ ] **Phase 4**: Gemini structured extraction, deterministic Java compliance rules engine, readiness reports.
+- [x] **Phase 2**: JPA entities, JWT authentication, user roles, application management REST APIs and 4-step intake wizard.
+- [x] **Phase 3**: PDF upload pipeline, Apache PDFBox 3 extraction, page-level evidence, duplicate SHA-256 detection and DocumentLocker UI.
+- [x] **Phase 4A**: Google Gemini Developer API integration, structured regulatory document extraction, page citation verification, versioned storage, and officer review workspace.
+- [ ] **Phase 4B**: Deterministic Java compliance rules engine (FSR, cadre ratios, built-up area, Fire NOC validity), readiness scorecard calculation.
 - [ ] **Phase 5**: RAG AICTE handbook assistant with page citations, officer review workspace, audit logging.
 - [ ] **Phase 6**: Integration, end-to-end testing, bug fixing, Vercel & Cloud Run deployment.
+
+---
+
+## 7. Phase 4A: Gemini Structured Document Extraction
+
+### Architecture & Anti-Hallucination Pipeline
+```
+[Uploaded PDF] 
+     │
+     ▼ (Phase 3)
+[Apache PDFBox 3] ── Page Text Indexed in `document_pages`
+     │
+     ▼ (Phase 4A Backend API: POST /api/v1/documents/{id}/extract)
+[GeminiExtractionService] (Google Gemini API via Backend HttpClient)
+     │  - Strict JSON prompt & temperature 0.0
+     │  - Field values, 1-based sourcePage, exact evidence quote
+     │
+     ▼
+[Java Post-Extraction Verifier]
+     ├── Page boundary check (1 <= page <= totalPages)
+     ├── Verbatim evidence substring verification against page text
+     └── Flagging: EXTRACTED vs. NEEDS_REVIEW + warning generation
+     │
+     ▼
+[PostgreSQL / H2 Persistence]
+     ├── `document_extractions` (versioned history, warnings, model ID)
+     └── `extracted_fields` (values, original values, review status, officer remarks)
+     │
+     ▼ (PATCH /api/v1/extractions/{extId}/fields/{fId}/review)
+[Reviewing Officer Review Workspace]
+     └── Authorized officers can VERIFY, FLAG_INCORRECT, or request CLARIFICATION
+```
+
+### Google AI Studio Setup & API Configuration
+1. Obtain an API Key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Set the environment variables on the backend (or in `.env` / environment):
+   ```bash
+   GEMINI_API_KEY="AIzaSy..."
+   GEMINI_MODEL="gemini-1.5-flash" # or gemini-2.0-flash
+   ```
+3. *Note on Resilience*: If `GEMINI_API_KEY` is not provided, the backend starts and operates normally; attempting an extraction will return a graceful `CONFIG_ERROR` with actionable instructions.
+
+### Supported Document Categories
+| Document Category | Extracted Fields |
+| :--- | :--- |
+| **`FIRE_SAFETY_NOC`** | `certificateNumber`, `issuingAuthority`, `institutionName`, `institutionAddress`, `issueDate`, `expiryDate`, `fireSafetyStatus` |
+| **`LAND_TITLE_DEED`** | `documentNumber`, `landownerName`, `institutionName`, `surveyNumber`, `totalLandArea`, `areaUnit`, `landLocation`, `issuingAuthority` |
+| **`BUILDING_COMPLETION_PLAN`** | `approvalNumber`, `issuingAuthority`, `institutionName`, `builtUpArea`, `areaUnit`, `approvalDate` |
+| **`FACULTY_CADRE_LIST`** | `institutionName`, `department`, `facultyName`, `facultyDesignation`, `qualification`, `totalFacultyCount` |
+| **`BARRIER_FREE_PWD_CERT`** | `certificateNumber`, `issuingAuthority`, `institutionName`, `issueDate`, `accessibilityStatus` |
+
+*Unsupported categories (e.g. `AUDITED_FINANCIALS`, `AFFIDAVIT_STAMP_PAPER`) safely return `UNSUPPORTED_CATEGORY` without consuming API quota.*
+
+### New Backend REST APIs
+- `POST /api/v1/documents/{documentId}/extract`: Triggers structured Gemini extraction.
+- `GET /api/v1/documents/{documentId}/extraction`: Fetches the latest extraction run.
+- `GET /api/v1/documents/{documentId}/extraction/history`: Returns versioned history of previous extractions.
+- `PATCH /api/v1/extractions/{extractionId}/fields/{fieldId}/review`: Reviewing Officer endpoint to verify, correct, or flag fields.
+
+### Security & Compliance Governance
+- **Zero Frontend Leakage**: The Gemini API key is never exposed to the frontend or browser.
+- **Cost & Token Control**: Text is capped at 15,000 characters; raw PDF bytes are never transmitted to LLM.
+- **Strict Human-in-the-Loop**: Displays disclaimer: *"AI-extracted information is advisory and may contain errors. All extracted values require human verification before regulatory use."*
+

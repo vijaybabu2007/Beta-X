@@ -11,17 +11,19 @@ import {
   FileCheck,
   ShieldCheck,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../../services/api';
-import type { DocumentModel, DocumentCategory } from '../../types';
+import type { DocumentModel, DocumentCategory, UserRole } from '../../types';
 import { DocumentEvidenceModal } from './DocumentEvidenceModal';
 
 interface DocumentLockerProps {
   applicationId: number | string;
+  userRole?: UserRole;
 }
 
-export const DocumentLocker: React.FC<DocumentLockerProps> = ({ applicationId }) => {
+export const DocumentLocker: React.FC<DocumentLockerProps> = ({ applicationId, userRole = 'INSTITUTION_ADMIN' }) => {
   const [documents, setDocuments] = useState<DocumentModel[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -121,6 +123,14 @@ export const DocumentLocker: React.FC<DocumentLockerProps> = ({ applicationId })
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
         </button>
+      </div>
+
+      {/* Advisory Legal Disclaimer */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center gap-3 text-xs text-amber-900 font-medium shadow-sm">
+        <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0" />
+        <div>
+          <span className="font-bold">Advisory System Disclaimer:</span> AI-extracted information is advisory and may contain errors. All extracted values require human verification before regulatory use.
+        </div>
       </div>
 
       {/* Upload Dropzone Form */}
@@ -302,9 +312,9 @@ export const DocumentLocker: React.FC<DocumentLockerProps> = ({ applicationId })
                     <td className="py-4 px-6 text-right">
                       <button
                         onClick={() => setInspectDoc(doc)}
-                        className="px-3 py-1 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm transition-all"
                       >
-                        <Eye className="w-3 h-3" /> Inspect Pages
+                        <Sparkles className="w-3.5 h-3.5 text-purple-200" /> Inspect & AI Extract
                       </button>
                     </td>
                   </tr>
@@ -315,10 +325,12 @@ export const DocumentLocker: React.FC<DocumentLockerProps> = ({ applicationId })
         </div>
       </div>
 
-      {/* Page Evidence Inspector Modal */}
+      {/* Page Evidence & Gemini Inspector Modal */}
       <DocumentEvidenceModal
         document={inspectDoc}
+        userRole={userRole}
         onClose={() => setInspectDoc(null)}
+        onExtractionUpdated={fetchDocuments}
       />
     </div>
   );
