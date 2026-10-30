@@ -21,6 +21,8 @@ backend/target/
 *.ear
 tools/
 .mvn/wrapper/maven-wrapper.jar
+uploads/
+backend/uploads/
 
 # Logs
 logs/

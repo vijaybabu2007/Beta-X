@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ApplicationSummary } from '../types';
+import type { ApplicationSummary, DocumentModel, DocumentPageModel, DocumentCategory } from '../types';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -8,7 +8,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 5000,
+  timeout: 10000,
 });
 
 // Intercept requests to inject JWT
@@ -55,6 +55,32 @@ export const api = {
     updateStatus: async (id: string | number, status: string, remarks?: string) => {
       const res = await apiClient.patch(`/applications/${id}/status`, { status, remarks });
       return res.data;
+    },
+  },
+  documents: {
+    upload: async (applicationId: number | string, category: DocumentCategory, file: File): Promise<DocumentModel> => {
+      const formData = new FormData();
+      formData.append('applicationId', String(applicationId));
+      formData.append('documentCategory', category);
+      formData.append('file', file);
+
+      const res = await apiClient.post('/documents/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return res.data;
+    },
+    listByApplication: async (applicationId: number | string): Promise<DocumentModel[]> => {
+      const res = await apiClient.get(`/documents/application/${applicationId}`);
+      return res.data;
+    },
+    getPages: async (documentId: number | string): Promise<DocumentPageModel[]> => {
+      const res = await apiClient.get(`/documents/${documentId}/pages`);
+      return res.data;
+    },
+    getDownloadUrl: (documentId: number | string): string => {
+      return `${API_BASE_URL}/documents/${documentId}/download`;
     },
   },
   health: async () => {

@@ -8,6 +8,7 @@ import { OfficerDashboard } from './components/dashboard/OfficerDashboard';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
 import { AuthModal } from './components/auth/AuthModal';
 import { NewApplicationWizard } from './components/institution/NewApplicationWizard';
+import { DocumentLocker } from './components/documents/DocumentLocker';
 import { BookOpen, Bot } from 'lucide-react';
 
 export function App() {
@@ -147,21 +148,9 @@ export function App() {
                 />
               )}
               {activeTab === 'documents' && (
-                <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm text-center">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-900">Document Locker & Intelligence (Phase 3)</h2>
-                  <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-                    Phase 3 will unlock multi-page PDF upload with Apache PDFBox 3 parsing and Google Cloud Document AI OCR fallback.
-                  </p>
-                  <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className="mt-6 px-4 py-2 bg-blue-700 text-white font-semibold text-sm rounded-lg hover:bg-blue-800"
-                  >
-                    Return to Dashboard
-                  </button>
-                </div>
+                <DocumentLocker 
+                  applicationId={applications.length > 0 ? applications[0].id : 1}
+                />
               )}
               {activeTab === 'knowledge_bot' && (
                 <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm text-center">

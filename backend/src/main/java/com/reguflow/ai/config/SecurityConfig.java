@@ -38,6 +38,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/health", "/api/v1/auth/**", "/h2-console/**").permitAll()
                 .requestMatchers("/api/v1/applications/**").permitAll() // permit with fallback or JWT
+                .requestMatchers("/api/v1/documents/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

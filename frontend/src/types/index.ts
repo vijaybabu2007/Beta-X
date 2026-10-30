@@ -18,8 +18,46 @@ export type ApplicationStatus =
   | 'APPROVED'
   | 'REJECTED';
 
+export type DocumentCategory =
+  | 'LAND_TITLE_DEED'
+  | 'FIRE_SAFETY_NOC'
+  | 'BUILDING_COMPLETION_PLAN'
+  | 'FACULTY_CADRE_LIST'
+  | 'BARRIER_FREE_PWD_CERT'
+  | 'AUDITED_FINANCIALS'
+  | 'AFFIDAVIT_STAMP_PAPER';
+
+export type ExtractionMethod = 'PDFBOX_NATIVE' | 'DOCUMENT_AI_OCR' | 'RULE_FALLBACK';
+
+export type VerificationVerdict = 'PENDING' | 'VERIFIED_OK' | 'DISCREPANCY_FLAGGED' | 'REJECTED';
+
+export interface DocumentModel {
+  id: number;
+  applicationId: number;
+  documentCategory: DocumentCategory;
+  fileName: string;
+  storagePath: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  sha256Hash: string;
+  pageCount: number;
+  extractionMethod: ExtractionMethod;
+  verificationVerdict: VerificationVerdict;
+  officerRemarks?: string;
+  duplicateFlag: boolean;
+  uploadedAt: string;
+}
+
+export interface DocumentPageModel {
+  id: number;
+  pageNumber: number;
+  pageText: string;
+  characterCount: number;
+  ocrApplied: boolean;
+}
+
 export interface ApplicationSummary {
-  id: string;
+  id: string | number;
   applicationNumber: string;
   institutionName: string;
   applicationType: ApplicationType;
@@ -29,7 +67,7 @@ export interface ApplicationSummary {
   submittedDate?: string;
   missingDocumentsCount: number;
   criticalDeficitsCount: number;
-  lastUpdated: string;
+  lastUpdated?: string;
 }
 
 export interface SystemHealth {
