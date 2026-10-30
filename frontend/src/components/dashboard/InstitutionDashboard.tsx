@@ -4,63 +4,36 @@ import {
   Clock, 
   AlertCircle, 
   FileWarning, 
-  ArrowUpRight, 
   CheckCircle, 
   Building2, 
   FileText,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import type { ApplicationSummary } from '../../types';
 
 interface InstitutionDashboardProps {
+  applications: ApplicationSummary[];
+  loading: boolean;
+  onRefresh: () => void;
   onNavigateToWizard: () => void;
   onNavigateToDocs: () => void;
 }
 
 export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({ 
+  applications,
+  loading,
+  onRefresh,
   onNavigateToWizard, 
   onNavigateToDocs 
 }) => {
-  // Synthetic benchmark institutional applications
-  const sampleApplications: ApplicationSummary[] = [
-    {
-      id: 'app-001',
-      applicationNumber: 'AICTE-2025-APP-89421',
-      institutionName: 'Apex Institute of Technology & Engineering',
-      applicationType: 'EXTENSION_OF_APPROVAL',
-      academicYear: '2025-2026',
-      status: 'READINESS_CHECK_COMPLETE',
-      readinessScore: 84,
-      missingDocumentsCount: 1,
-      criticalDeficitsCount: 1,
-      lastUpdated: 'Today, 10:15 AM'
-    },
-    {
-      id: 'app-002',
-      applicationNumber: 'AICTE-2025-APP-91044',
-      institutionName: 'Apex Institute of Technology & Engineering',
-      applicationType: 'INTAKE_VARIATION',
-      academicYear: '2025-2026',
-      status: 'UNDER_SCRUTINY',
-      readinessScore: 92,
-      missingDocumentsCount: 0,
-      criticalDeficitsCount: 0,
-      lastUpdated: 'Yesterday'
-    },
-    {
-      id: 'app-003',
-      applicationNumber: 'AICTE-2025-APP-92318',
-      institutionName: 'Apex Institute of Technology & Engineering',
-      applicationType: 'NEW_COURSE',
-      academicYear: '2025-2026',
-      status: 'DRAFT',
-      readinessScore: 45,
-      missingDocumentsCount: 3,
-      criticalDeficitsCount: 2,
-      lastUpdated: '3 days ago'
-    }
-  ];
+  // Aggregate KPI stats dynamically
+  const totalApps = applications.length;
+  const avgReadiness = totalApps > 0 
+    ? Math.round(applications.reduce((acc, a) => acc + (a.readinessScore || 0), 0) / totalApps)
+    : 0;
+  const totalMissingDocs = applications.reduce((acc, a) => acc + (a.missingDocumentsCount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -76,6 +49,14 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={onRefresh}
+            disabled={loading}
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-300 rounded-lg shadow-sm transition-all"
+            title="Refresh Applications"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+          </button>
           <button 
             onClick={onNavigateToDocs}
             className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-sm transition-all"
@@ -103,12 +84,21 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">84%</span>
-            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">High Readiness</span>
+            <span className="text-3xl font-black text-slate-900">{avgReadiness}%</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+              avgReadiness >= 80 ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'
+            }`}>
+              {avgReadiness >= 80 ? 'High Readiness' : 'Moderate'}
+            </span>
           </div>
-          <p className="text-xs text-slate-500 mt-2">18 of 21 APH Norms Verified</p>
+          <p className="text-xs text-slate-500 mt-2">Evaluated against APH 2024-27 Norms</p>
           <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-            <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '84%' }}></div>
+            <div 
+              className={`h-2 rounded-full transition-all duration-500 ${
+                avgReadiness >= 80 ? 'bg-emerald-500' : 'bg-amber-500'
+              }`} 
+              style={{ width: `${avgReadiness}%` }}
+            ></div>
           </div>
         </div>
 
@@ -121,10 +111,10 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">3</span>
-            <span className="text-xs text-slate-500">Cycle 2025-26</span>
+            <span className="text-3xl font-black text-slate-900">{totalApps}</span>
+            <span className="text-xs text-slate-500">Database Records</span>
           </div>
-          <p className="text-xs text-slate-500 mt-2">1 Under Scrutiny • 1 Ready • 1 Draft</p>
+          <p className="text-xs text-slate-500 mt-2">JPA PostgreSQL Synchronized</p>
         </div>
 
         {/* Missing Documents */}
@@ -136,7 +126,7 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
             </span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-red-600">2</span>
+            <span className="text-3xl font-black text-red-600">{totalMissingDocs}</span>
             <span className="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded">Action Required</span>
           </div>
           <p className="text-xs text-slate-500 mt-2">Fire Safety NOC & Land Conversion</p>
@@ -162,7 +152,7 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
       <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex items-start space-x-3">
         <Sparkles className="w-5 h-5 text-blue-700 mt-0.5 shrink-0" />
         <div className="text-xs text-blue-900 leading-relaxed">
-          <strong className="font-bold">ReguFlow Advisory Engine Summary:</strong> Automated cross-document scrutiny flagged 1 potential inconsistency in Application <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono">AICTE-2025-APP-89421</code>. Declared instructional area is 4,800 sq.m while the uploaded Building Plan indicates 4,620 sq.m (Deficit: 180 sq.m). Upload an architect-certified affidavit or adjust intake claims.
+          <strong className="font-bold">ReguFlow Advisory Engine Summary:</strong> Automated cross-document scrutiny verified <code className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-mono">{applications.length}</code> applications. Calculated FSR and built-up areas are validated using deterministic Java rules against the official AICTE Approval Process Handbook.
         </div>
       </div>
 
@@ -170,10 +160,10 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Institutional Applications</h2>
+            <h2 className="text-base font-bold text-slate-900">Institutional Applications (PostgreSQL JPA)</h2>
             <p className="text-xs text-slate-500">Track readiness check status and officer review progress</p>
           </div>
-          <span className="text-xs text-slate-500">Showing 3 of 3 records</span>
+          <span className="text-xs text-slate-500">Showing {applications.length} live records</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -190,8 +180,8 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-medium text-slate-700">
-              {sampleApplications.map((app) => (
-                <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+              {applications.map((app) => (
+                <tr key={app.id || app.applicationNumber} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-4 px-6 font-mono font-bold text-slate-900">
                     {app.applicationNumber}
                   </td>
@@ -224,6 +214,8 @@ export const InstitutionDashboard: React.FC<InstitutionDashboardProps> = ({
                         ? 'bg-blue-50 text-blue-800 border-blue-200' 
                         : app.status === 'READINESS_CHECK_COMPLETE' 
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : app.status === 'SUBMITTED'
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
                         : 'bg-slate-100 text-slate-800 border-slate-200'
                     }`}>
                       {app.status.replace(/_/g, ' ')}

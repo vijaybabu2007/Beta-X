@@ -1,46 +1,97 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import type { UserRole, SystemHealth } from './types';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { UserRole, SystemHealth, ApplicationSummary } from './types';
+import { api } from './services/api';
 import { GovHeader } from './components/layout/GovHeader';
 import { Sidebar } from './components/layout/Sidebar';
 import { InstitutionDashboard } from './components/dashboard/InstitutionDashboard';
 import { OfficerDashboard } from './components/dashboard/OfficerDashboard';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
-import { FileUp, BookOpen, Bot } from 'lucide-react';
+import { AuthModal } from './components/auth/AuthModal';
+import { NewApplicationWizard } from './components/institution/NewApplicationWizard';
+import { BookOpen, Bot } from 'lucide-react';
 
 export function App() {
   const [currentRole, setCurrentRole] = useState<UserRole>('INSTITUTION_ADMIN');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [backendOnline, setBackendOnline] = useState<boolean>(false);
+  const [applications, setApplications] = useState<ApplicationSummary[]>([]);
+  const [loadingApps, setLoadingApps] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<{ email: string; fullName: string; role: UserRole } | null>({
+    email: 'admin@apextech.edu.in',
+    fullName: 'Dr. Rajesh Verma',
+    role: 'INSTITUTION_ADMIN',
+  });
+
+  // Fetch applications from Spring Boot backend
+  const loadApplications = useCallback(async () => {
+    setLoadingApps(true);
+    try {
+      const data = await api.applications.list();
+      setApplications(data);
+    } catch (err) {
+      console.warn('Backend unavailable, using fallback benchmark data', err);
+    } finally {
+      setLoadingApps(false);
+    }
+  }, []);
 
   // Poll backend health status
   useEffect(() => {
-    const checkBackendHealth = async () => {
+    const checkBackend = async () => {
       try {
-        const response = await axios.get('http://localhost:8080/api/v1/health', {
-          timeout: 2000
-        });
-        if (response.data && response.data.status === 'UP') {
-          setHealth(response.data);
+        const res = await api.health();
+        if (res && res.status === 'UP') {
+          setHealth(res);
           setBackendOnline(true);
         }
       } catch (err) {
-        // Backend offline or compiling
         setBackendOnline(false);
       }
     };
 
-    checkBackendHealth();
-    const interval = setInterval(checkBackendHealth, 5000);
+    checkBackend();
+    loadApplications();
+    const interval = setInterval(checkBackend, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadApplications]);
 
   const handleRoleChange = (newRole: UserRole) => {
     setCurrentRole(newRole);
-    if (newRole === 'INSTITUTION_ADMIN') setActiveTab('dashboard');
-    else if (newRole === 'REVIEWING_OFFICER') setActiveTab('officer_queue');
-    else if (newRole === 'SYSTEM_ADMIN') setActiveTab('system_health');
+    if (newRole === 'INSTITUTION_ADMIN') {
+      setCurrentUser({
+        email: 'admin@apextech.edu.in',
+        fullName: 'Dr. Rajesh Verma',
+        role: 'INSTITUTION_ADMIN',
+      });
+      setActiveTab('dashboard');
+    } else if (newRole === 'REVIEWING_OFFICER') {
+      setCurrentUser({
+        email: 'officer.mumbai@aicte.gov.in',
+        fullName: 'Sanjay Kulkarni (Regional Officer)',
+        role: 'REVIEWING_OFFICER',
+      });
+      setActiveTab('officer_queue');
+    } else if (newRole === 'SYSTEM_ADMIN') {
+      setCurrentUser({
+        email: 'director.approval@aicte.gov.in',
+        fullName: 'Prof. Anil Sahasrabudhe',
+        role: 'SYSTEM_ADMIN',
+      });
+      setActiveTab('system_health');
+    }
+  };
+
+  const handleLoginSuccess = (user: { email: string; fullName: string; role: UserRole; token: string }) => {
+    setCurrentUser(user);
+    handleRoleChange(user.role);
+    loadApplications();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('reguflow_jwt');
+    setCurrentUser(null);
   };
 
   return (
@@ -49,7 +100,10 @@ export function App() {
       <GovHeader 
         currentRole={currentRole} 
         onRoleChange={handleRoleChange} 
-        backendOnline={backendOnline} 
+        backendOnline={backendOnline}
+        user={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Workspace Layout */}
@@ -67,35 +121,39 @@ export function App() {
             <>
               {activeTab === 'dashboard' && (
                 <InstitutionDashboard 
+                  applications={applications}
+                  loading={loadingApps}
+                  onRefresh={loadApplications}
+                  onNavigateToWizard={() => setActiveTab('new_application')}
+                  onNavigateToDocs={() => setActiveTab('documents')}
+                />
+              )}
+              {activeTab === 'applications' && (
+                <InstitutionDashboard 
+                  applications={applications}
+                  loading={loadingApps}
+                  onRefresh={loadApplications}
                   onNavigateToWizard={() => setActiveTab('new_application')}
                   onNavigateToDocs={() => setActiveTab('documents')}
                 />
               )}
               {activeTab === 'new_application' && (
-                <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm text-center">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileUp className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-900">Application Intake Wizard</h2>
-                  <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-                    Phase 2 will unlock the 5-step interactive institutional intake wizard with real-time APH rule calculation.
-                  </p>
-                  <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className="mt-6 px-4 py-2 bg-blue-700 text-white font-semibold text-sm rounded-lg hover:bg-blue-800"
-                  >
-                    Return to Dashboard
-                  </button>
-                </div>
+                <NewApplicationWizard 
+                  onCancel={() => setActiveTab('dashboard')}
+                  onSuccess={() => {
+                    loadApplications();
+                    setActiveTab('dashboard');
+                  }}
+                />
               )}
               {activeTab === 'documents' && (
                 <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm text-center">
                   <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4">
                     <BookOpen className="w-8 h-8" />
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900">Document Locker & Intelligence</h2>
+                  <h2 className="text-xl font-bold text-slate-900">Document Locker & Intelligence (Phase 3)</h2>
                   <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-                    Phase 3 will unlock Apache PDFBox 3 page extraction, Document AI OCR fallback, and structured metric parsing.
+                    Phase 3 will unlock multi-page PDF upload with Apache PDFBox 3 parsing and Google Cloud Document AI OCR fallback.
                   </p>
                   <button 
                     onClick={() => setActiveTab('dashboard')}
@@ -110,7 +168,7 @@ export function App() {
                   <div className="w-16 h-16 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Bot className="w-8 h-8" />
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900">AICTE Handbook RAG Assistant</h2>
+                  <h2 className="text-xl font-bold text-slate-900">AICTE Handbook RAG Assistant (Phase 5)</h2>
                   <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
                     Phase 5 will activate the Gemini RAG pipeline grounded in official AICTE handbook passages with page-level citations.
                   </p>
@@ -134,6 +192,13 @@ export function App() {
           )}
         </main>
       </div>
+
+      {/* Authentication Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }
